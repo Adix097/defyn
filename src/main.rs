@@ -1,6 +1,26 @@
 use std::env;
 use std::error::Error;
 use std::process;
+use serde::Deserialize;
+
+#[derive(Debug, Deserialize)]
+struct Entry {
+    word: String,
+    meanings: Vec<Meaning>,
+}
+
+#[derive(Debug, Deserialize)]
+struct Meaning {
+    #[serde(rename = "partOfSpeech")]
+    part_of_speech: String,
+    definitions: Vec<Definition>,
+}
+
+#[derive(Debug, Deserialize)]
+struct Definition {
+    definition: String,
+    example: Option<String>,
+}
 
 fn parse_word(args: &[String]) -> Result<String, String> {
     if args.len() != 1 {
@@ -42,6 +62,12 @@ fn fetch(word: &str) -> Result<String, Box<dyn Error>> {
     Ok(body)
 }
 
+fn lookup(word: &str) -> Result<Vec<Entry>, Box<dyn Error>> {
+    let body = fetch(word)?;
+    let entries: Vec<Entry> = serde_json::from_str(&body)?;
+    Ok(entries)
+}
+
 fn main() {
     let args: Vec<String> = env::args().skip(1).collect();
 
@@ -53,8 +79,22 @@ fn main() {
         }
     };
 
-    match fetch(&word) {
-        Ok(body) => println!("{}", body),
+    match lookup(&word) {
+        Ok(entries) => {
+            let entry = &entries[0];
+            println!("{}", entry.word);
+
+            for meaning in &entry.meanings {
+                println!("  ({})", meaning.part_of_speech);
+                for def in &meaning.definitions {
+                    println!("    - {}", def.definition);
+                    if let Some(example) = &def.example {
+                        println!("      e.g. {}", example);
+                    }
+                }
+            }
+        }
+        
         Err(e) => {
             eprintln!("Error: {}", e);
             process::exit(1);
