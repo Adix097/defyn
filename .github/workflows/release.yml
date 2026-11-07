@@ -1,0 +1,32 @@
+name: Release
+
+on:
+  push:
+    tags: ["v*"]
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    strategy:
+      matrix:
+        include:
+          - os: ubuntu-latest
+            file: defyn
+            asset: defyn-linux
+          - os: macos-latest
+            file: defyn
+            asset: defyn-macos
+          - os: windows-latest
+            file: defyn.exe
+            asset: defyn-windows.exe
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - run: cargo build --release
+      - run: cp target/release/${{ matrix.file }} ${{ matrix.asset }}
+        shell: bash
+      - uses: softprops/action-gh-release@v2
+        with:
+          files: ${{ matrix.asset }}
