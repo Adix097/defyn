@@ -2,6 +2,10 @@
 name = "defyn"
 version = "0.1.0"
 edition = "2024"
+description = "A tiny CLI dictionary: look up a word, get its meaning and examples."
+repository = "https://github.com/Adix097/defyn"
+readme = "README.md"
+categories = ["command-line-utilities"]
 
 [dependencies]
 reqwest = { version = "0.13.5", features = ["blocking"] }
