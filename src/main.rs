@@ -1,4 +1,5 @@
 use std::env;
+use std::error::Error;
 use std::process;
 
 fn parse_word(args: &[String]) -> Result<String, String> {
@@ -19,13 +20,34 @@ fn parse_word(args: &[String]) -> Result<String, String> {
     Ok(word.to_lowercase())
 }
 
+fn fetch(word: &str) -> Result<String, Box<dyn Error>> {
+    let url = format!("https://api.dictionaryapi.dev/api/v2/entries/en/{}", word);
+
+    let response = reqwest::blocking::get(&url)?;
+
+    if response.status() == reqwest::StatusCode::NOT_FOUND {
+        return Err(format!("No definition found for '{}'", word).into());
+    }
+
+    let body = response.error_for_status()?.text()?;
+    Ok(body)
+}
+
 fn main() {
     let args: Vec<String> = env::args().skip(1).collect();
 
-    match parse_word(&args) {
-        Ok(word) => println!("Looking up: {}", word),
+    let word = match parse_word(&args) {
+        Ok(word) => word,
         Err(message) => {
             eprintln!("Error: {}", message);
+            process::exit(1);
+        }
+    };
+
+    match fetch(&word) {
+        Ok(body) => println!("{}", body),
+        Err(e) => {
+            eprintln!("Error: {}", e);
             process::exit(1);
         }
     }
