@@ -68,6 +68,38 @@ fn lookup(word: &str) -> Result<Vec<Entry>, Box<dyn Error>> {
     Ok(entries)
 }
 
+fn print_entry(entry: &Entry) {
+    let Some(meaning) = entry.meanings.first() else {
+        eprintln!("Error: '{}' has no meanings", entry.word);
+        return;
+    };
+
+    let Some(definition) = meaning.definitions.first() else {
+        eprintln!("Error: '{}' has no definitions", entry.word);
+        return;
+    };
+
+    // Collect up to two examples from ANY meaning of this entry
+    let examples: Vec<&str> = entry
+        .meanings
+        .iter()
+        .flat_map(|m| m.definitions.iter())
+        .filter_map(|d| d.example.as_deref())
+        .take(2)
+        .collect();
+
+    println!("{} ({})", entry.word, meaning.part_of_speech);
+    println!("  Meaning: {}", definition.definition);
+
+    for (i, example) in examples.iter().enumerate() {
+        println!("  {}. {}", i + 1, example);
+    }
+
+    if examples.len() < 2 {
+        eprintln!("  (only {} example(s) available)", examples.len());
+    }
+}
+
 fn main() {
     let args: Vec<String> = env::args().skip(1).collect();
 
@@ -80,21 +112,13 @@ fn main() {
     };
 
     match lookup(&word) {
-        Ok(entries) => {
-            let entry = &entries[0];
-            println!("{}", entry.word);
-
-            for meaning in &entry.meanings {
-                println!("  ({})", meaning.part_of_speech);
-                for def in &meaning.definitions {
-                    println!("    - {}", def.definition);
-                    if let Some(example) = &def.example {
-                        println!("      e.g. {}", example);
-                    }
-                }
+        Ok(entries) => match entries.first() {
+            Some(entry) => print_entry(entry),
+            None => {
+                eprintln!("Error: no entries returned for '{}'.", word);
+                process::exit(1);
             }
-        }
-        
+        },
         Err(e) => {
             eprintln!("Error: {}", e);
             process::exit(1);
