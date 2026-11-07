@@ -24,9 +24,18 @@ fn fetch(word: &str) -> Result<String, Box<dyn Error>> {
     let url = format!("https://api.dictionaryapi.dev/api/v2/entries/en/{}", word);
 
     let response = reqwest::blocking::get(&url)?;
+    let status = response.status();
 
-    if response.status() == reqwest::StatusCode::NOT_FOUND {
+    if status == reqwest::StatusCode::NOT_FOUND {
         return Err(format!("No definition found for '{}'", word).into());
+    }
+
+    if status.is_server_error() {
+        return Err(format!(
+            "The dictionary service is having problems (HTTP {}). Try again in a moment",
+            status.as_u16()
+        )
+        .into());
     }
 
     let body = response.error_for_status()?.text()?;
